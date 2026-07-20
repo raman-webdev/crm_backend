@@ -9,6 +9,8 @@ class Organization(models.Model):
     email = models.EmailField()
     phone = models.CharField(max_length=30)
 
+    is_active = models.BooleanField(default=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -28,15 +30,14 @@ class Membership(models.Model):
     )
 
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        'accounts.User',
         on_delete=models.CASCADE,
-        related_name="memberships",
+        related_name="membership"
     )
-
     organization = models.ForeignKey(
-        Organization,
+        "organizations.Organization",
         on_delete=models.CASCADE,
-        related_name="memberships",
+        related_name="membership"
     )
 
     role = models.CharField(
@@ -44,10 +45,6 @@ class Membership(models.Model):
         choices=ROLE_CHOICES,
     )
 
+    is_active = models.BooleanField(default=True)
+
     joined_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ("user", "organization")
-
-    def __str__(self):
-        return f"{self.user.email} - {self.organization.name}"

@@ -32,12 +32,12 @@ class Membership(models.Model):
     user = models.ForeignKey(
         'accounts.User',
         on_delete=models.CASCADE,
-        related_name="membership"
+        related_name="memberships"
     )
     organization = models.ForeignKey(
         "organizations.Organization",
         on_delete=models.CASCADE,
-        related_name="membership"
+        related_name="memberships"
     )
 
     role = models.CharField(

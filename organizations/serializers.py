@@ -29,3 +29,20 @@ class InviteMemberSerializer(serializers.Serializer):
     role = serializers.ChoiceField(
         choices=Membership.ROLE_CHOICES,
     )
+
+
+class InvitationDetailSerializer(serializers.ModelSerializer):
+    organization = serializers.CharField(
+        source="organization.name",
+        read_only=True,
+    )
+
+    class Meta:
+        model = Invitation
+        fields = (
+            "email",
+            "role",
+            "organization",
+            "status",
+            "expires_at",
+        )

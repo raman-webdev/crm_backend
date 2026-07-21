@@ -1,6 +1,6 @@
 from django.db import transaction
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.shortcuts import get_object_or_404
@@ -9,7 +9,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from .models import Organization, Membership, Invitation
-from .serializers import OrganizationSerializer, InviteMemberSerializer
+from .serializers import OrganizationSerializer, InviteMemberSerializer, InvitationDetailSerializer
 from .helpers import get_current_organization, require_roles
 from ..accounts.models import User
 
@@ -188,4 +188,44 @@ class InvitationView(APIView):
             status=status.HTTP_201_CREATED,
         )
 
+
+class InvitationDetailView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, token):
+        
+        invitation = get_object_or_404(
+            Invitation,
+            tok=token,
+        )
+
+        if invitation.status != Invitation.PENDING:
+            return Response(
+                {
+                    "detail": "Invitation is no longer valid."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+        if invitation.is_expired:
+            invitation.status = Invitation.EXPIRED
+            invitation.save(update_fields=["status"])
+
+            return Response(
+                {
+                    "detail": "Invitation has expired."
+                },
+                status=400,
+            )
+        
+        serializer = InvitationDetailSerializer(invitation)
+
+        return Response(
+            {
+                "invitation": serializer.data,
+                "user_exists": User.objects.filter(
+                    email=invitation.email
+                ).exists(),
+            }
+        )
         

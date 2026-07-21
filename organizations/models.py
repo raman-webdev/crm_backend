@@ -72,7 +72,7 @@ class Invitation(models.Model):
         related_name="invitations",
     )
 
-    email = models.EmailField()
+    email = models.EmailField(db_index=True)
 
     role = models.CharField(
         max_length=20,

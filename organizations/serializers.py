@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Organization
+from .models import Organization, Membership, Invitation
 
 class OrganizationSerializer(serializers.ModelSerializer):
 
@@ -20,3 +20,12 @@ class OrganizationSerializer(serializers.ModelSerializer):
             "is_active",
             "created_at",
         ]
+
+
+class InviteMemberSerializer(serializers.Serializer):
+
+    email = serializers.EmailField()
+
+    role = serializers.ChoiceField(
+        choices=Membership.ROLE_CHOICES,
+    )

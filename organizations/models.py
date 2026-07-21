@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 import uuid
+from django.utils import timezone
 
 # Create your models here.
 
@@ -52,10 +53,23 @@ class Membership(models.Model):
 
 
 class Invitation(models.Model):
+
+    PENDING = "PENDING"
+    ACCEPTED = "ACCEPTED"
+    EXPIRED = "EXPIRED"
+    REVOKED = "REVOKED"
+
+    STATUS_CHOICES = (
+        (PENDING, "Pending"),
+        (ACCEPTED, "Accepted"),
+        (EXPIRED, "Expired"),
+        (REVOKED, "Revoked"),
+    )
+
     organization = models.ForeignKey(
         Organization,
         on_delete=models.CASCADE,
-        related_name="invitations"
+        related_name="invitations",
     )
 
     email = models.EmailField()
@@ -68,21 +82,36 @@ class Invitation(models.Model):
     invited_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="sent_invitations"
+        related_name="sent_invitations",
     )
 
     token = models.UUIDField(
-        unique=True,
+        default=uuid.uuid4,
         editable=False,
-        default=uuid.uuid4
+        unique=True,
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default=PENDING,
     )
 
     expires_at = models.DateTimeField()
 
-    accepted = models.BooleanField(default=False)
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+    )
 
-    class Meta:
-        unique_together = (
-            "organization",
-            "email",
-        )
+    # class Meta:
+    #     unique_together = (
+    #         "organization",
+    #         "email",
+    #     )
+
+    @property
+    def is_expired(self):
+        return timezone.now() > self.expires_at
+
+    def __str__(self):
+        return f"{self.email} ({self.organization.name})"

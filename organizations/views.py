@@ -7,6 +7,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import PermissionDenied
 from django.utils import timezone
 from datetime import timedelta
+from django.db import transaction
 
 from .models import Organization, Membership, Invitation
 from .serializers import OrganizationSerializer, InviteMemberSerializer, InvitationDetailSerializer
@@ -228,4 +229,75 @@ class InvitationDetailView(APIView):
                 ).exists(),
             }
         )
-        
+
+
+
+class AcceptInvitationAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request, token):
+
+        invitation = get_object_or_404(
+            Invitation,
+            token=token,
+        )
+
+        if invitation.status != Invitation.PENDING:
+            return Response(
+                {
+                    "detail": "This invitation is no longer valid."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if invitation.is_expired:
+            invitation.status = Invitation.EXPIRED
+            invitation.save(update_fields=["status"])
+
+            return Response(
+                {
+                    "detail": "Invitation has expired."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if request.user.email.lower() != invitation.email.lower():
+            return Response(
+                {
+                    "detail": (
+                        "You must log in with the invited email address."
+                    )
+                },
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if Membership.objects.filter(
+            organization=invitation.organization,
+            user=request.user,
+            is_active=True,
+        ).exists():
+            return Response(
+                {
+                    "detail": (
+                        "You are already a member of this organization."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        Membership.objects.create(
+            organization=invitation.organization,
+            user=request.user,
+            role=invitation.role,
+        )
+
+        invitation.status = Invitation.ACCEPTED
+        invitation.save(update_fields=["status"])
+
+        return Response(
+            {
+                "message": "Invitation accepted successfully."
+            },
+            status=status.HTTP_200_OK,
+        )

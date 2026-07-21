@@ -50,3 +50,26 @@ def get_current_organization(request):
     
 
     return membership.organization, membership
+
+
+def require_roles(membership, *roles):
+    """
+    Ensure the current user has one of the required roles.
+    """
+
+    if membership.role not in roles:
+        raise PermissionDenied(
+            "You do not have permission to perform this action."
+        )
+    
+
+def is_owner(membership):
+    return membership.role == Membership.OWNER
+
+
+def is_manager(membership):
+    return membership.role == Membership.MANAGER
+
+
+def is_staff(membership):
+    return membership.role == Membership.STAFF

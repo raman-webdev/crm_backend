@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+import uuid
 
 # Create your models here.
 
@@ -48,3 +49,40 @@ class Membership(models.Model):
     is_active = models.BooleanField(default=True)
 
     joined_at = models.DateTimeField(auto_now_add=True)
+
+
+class Invitation(models.Model):
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="invitations"
+    )
+
+    email = models.EmailField()
+
+    role = models.CharField(
+        max_length=20,
+        choices=Membership.ROLE_CHOICES,
+    )
+
+    invited_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="sent_invitations"
+    )
+
+    token = models.UUIDField(
+        unique=True,
+        editable=False,
+        default=uuid.uuid4
+    )
+
+    expires_at = models.DateTimeField()
+
+    accepted = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = (
+            "organization",
+            "email",
+        )

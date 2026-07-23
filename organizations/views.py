@@ -10,7 +10,7 @@ from datetime import timedelta
 from django.db import transaction
 
 from .models import Organization, Membership, Invitation
-from .serializers import OrganizationSerializer, InviteMemberSerializer, InvitationDetailSerializer
+from .serializers import OrganizationSerializer, InviteMemberSerializer, InvitationDetailSerializer, MembershipSerializer
 from .helpers import get_current_organization, require_roles
 from ..accounts.models import User
 
@@ -301,3 +301,131 @@ class AcceptInvitationAPIView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+    
+
+class MembershipListAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+
+        organization, membership = get_current_organization(request)
+
+        require_roles(
+            membership,
+            Membership.OWNER,
+            Membership.MANAGER,
+        )
+
+        members = (
+            Membership.objects
+            .filter(
+                organization=organization,
+                is_active=True,
+            )
+            .select_related("user")
+            .order_by("joined_at")
+        )
+
+        serializer = MembershipSerializer(
+            members,
+            many=True,
+        )
+
+        return Response(serializer.data)
+    
+
+class MembershipDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request, pk):
+        
+        organization, membership = get_current_organization(request)
+
+        require_roles(
+            membership,
+            Membership.OWNER,
+        )
+
+        member = get_object_or_404(
+            Membership,
+            pk=pk,
+            organization=organization,
+            is_active=True,
+        )
+
+        if member.user == request.user:
+            return Response(
+                {
+                    "detail": "You cannot change your own role,"
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        
+
+        if member.role == Membership.OWNER:
+            return Response(
+                {
+                    "detail": "Owner cannot be modified.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = MembershipSerializer(
+            member,
+            data=request.data,
+            partial=True,
+        )
+
+        if serializer.validated_data["role"] == Membership.OWNER:
+            return Response(
+                {
+                    "detail": "Cannot assign Owner role.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data)
+    
+
+    
+    def delete(self, request, pk):
+
+        organization, membership = get_current_organization(request)
+
+        require_roles(
+            membership,
+            Membership.OWNER,
+        )
+
+        member = get_object_or_404(
+            Membership, 
+            pk=pk,
+            organization=organization,
+            is_active=True
+        )
+
+        if member.user == request.user:
+            return Response(
+                {
+                    "detaol": "You cannot remove yourself",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        member.is_active = False
+        member.save(update_fields=["is_active"])
+
+        return Response(
+            {
+                "message": "Member removed successfully.",
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+
+
+        

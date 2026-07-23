@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import OrganizationListCreateView, OrganizationDetailView, InvitationView
+from .views import OrganizationListCreateView, OrganizationDetailView, InvitationView, InvitationDetailView, AcceptInvitationAPIView
 
 
 urlpatterns = [
@@ -17,5 +17,15 @@ urlpatterns = [
     "invitations/",
     InvitationView.as_view(),
     name="invite-member",
-)
+    ),
+    path(
+        "invitations/<uuid:token>/",
+        InvitationDetailView.as_view(),
+        name="invitation-detail",
+    ),
+    path(
+        "invitations/<uuid:token>/accept/",
+        AcceptInvitationAPIView.as_view(),
+        name="invitation-accept",
+    ),
 ]

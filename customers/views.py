@@ -4,13 +4,14 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 
 
 from .models import Customer
 from .serializers import CustomerSerializer
 
-from ..organizations.helpers import get_current_organization, require_roles
-from ..organizations.models import Membership
+from organizations.helpers import get_current_organization, require_roles
+from organizations.models import Membership
 
 # Create your views here.
 
@@ -23,7 +24,7 @@ class CustomerListCreateView(APIView):
         organization, membership = get_current_organization(request)
 
         require_roles(
-            Membership,
+            membership,
             Membership.OWNER,
             Membership.MANAGER,
             Membership.STAFF,
@@ -87,5 +88,89 @@ class CustomerListCreateView(APIView):
 
 
 
+class CustomerDetailView(APIView):
+    permission_classes = [IsAuthenticated]
 
 
+    def get(self, request, pk):
+
+        organization, membership = get_current_organization(request)
+
+        require_roles(
+            membership,
+            Membership.OWNER,
+            Membership.MANAGER,
+            Membership.STAFF,
+        )
+
+        customer = get_object_or_404(
+            Customer,
+            organization=organization,
+            pk=pk,
+            is_active=True,
+        )
+
+        serializer = CustomerSerializer(
+            customer,
+        )
+
+        return Response(
+            serializer.data
+        )
+
+
+    def patch(self, request, pk):
+
+        organization, membership = get_current_organization(request)
+
+        require_roles(
+            membership,
+            Membership.OWNER,
+            Membership.MANAGER,
+        )
+
+        customer = get_object_or_404(
+            Customer,
+            organization=organization,
+            pk=pk,
+            is_active=True,
+        )
+
+        serializer = CustomerSerializer(
+            customer,
+            data=request.data,
+            partial=True,
+        )
+
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data)
+
+
+    def delete(self, request, pk):
+
+        organization, membership = get_current_organization(request)
+
+        require_roles(
+            membership,
+            Membership.OWNER,
+            Membership.MANAGER,
+        )
+
+        customer = get_object_or_404(
+            Customer,
+            organization=organization,
+            pk=pk,
+            is_active=True,
+        )
+
+        customer.is_active = False
+        customer.save(update_fields=["is_active"])
+
+        return Response(
+            {
+                 "message": "Customer removed successfully.",
+            },
+            status=status.HTTP_200_OK
+        )

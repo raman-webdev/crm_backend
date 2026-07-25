@@ -12,7 +12,7 @@ from django.db import transaction
 from .models import Organization, Membership, Invitation
 from .serializers import OrganizationSerializer, InviteMemberSerializer, InvitationDetailSerializer, MembershipSerializer
 from .helpers import get_current_organization, require_roles
-from ..accounts.models import User
+from accounts.models import User
 
 
 class OrganizationListCreateView(APIView):

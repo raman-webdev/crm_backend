@@ -108,3 +108,125 @@ class TaskListCreateView(APIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+class TaskDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+
+        organization, membership = get_current_organization(organization)
+
+        require_roles(
+            membership,
+            Membership.OWNER,
+            Membership.MANAGER,
+            Membership.STAFF,
+        )
+
+        task = get_object_or_404(
+            Task,
+            organization=organization,
+            pk=pk,
+            is_active=True,
+        )
+
+        serializer = TaskSerializer(
+            task,
+        )
+
+        return Response(
+            serializer.data
+        )
+
+
+    def patch(self, request, pk):
+
+        organization, membership = get_current_organization(request)
+
+        require_roles(
+            membership,
+            Membership.OWNER,
+            Membership.MANAGER,
+            Membership.STAFF,
+        )
+
+        task = get_object_or_404(
+            Task,
+            organization=organization,
+            pk=pk,
+            is_active=True,
+        )
+
+        serializer = TaskSerializer(
+            task,
+            data=request.data,
+            partial=True,
+        )
+
+        serializer.is_valid(raise_exception=True)
+
+        assigned_to = serializer.validated_data.get["assigned_to"]
+
+        # if assigned_to == request.user:
+        #     return Response(
+        #         {
+        #             "detail": "user cannot update own task."
+        #         },
+        #         status=status.HTTP_400_BAD_REQUEST
+        #     )
+
+        if (
+            membership.role == Membership.STAFF
+            or task.assigned_to != request.user
+        ):
+            return Response(
+                {
+                    "detail": "You can only update tasks assigned to you."
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+
+        serializer.save()
+
+        return Response(serializer.data)
+
+
+
+    def delete(self, request, pk):
+
+        organization, membership = get_current_organization(request)
+
+        require_roles(
+            membership,
+            Membership.OWNER,
+            Membership.MANAGER,
+        )
+
+        task = get_object_or_404(
+            Task,
+            organization=organization,
+            pk=pk,
+            is_active=True,
+        )
+
+        if task.assigned_to == request.user:
+            return Response(
+                {
+                    "detail": "You cannot delete a task assigned to yourself."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        task.is_active = False
+        task.save(update_fields=["is_active"])
+
+        return Response(
+            {
+                "message": "Task delete successfully."
+            },
+            status=status.HTTP_200_OK
+        )
+
+

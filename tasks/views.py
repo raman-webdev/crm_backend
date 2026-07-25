@@ -176,6 +176,21 @@ class TaskDetailView(APIView):
         #         status=status.HTTP_400_BAD_REQUEST
         #     )
 
+        if assigned_to:
+            exists = Membership.objects.filter(
+                organization=organization,
+                user=assigned_to,
+                is_active=True,
+            ).exists()
+
+            if not exists:
+                return Response(
+                    {
+                        "detail": "Assigned user does not belong to this organization."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
         if (
             membership.role == Membership.STAFF
             or task.assigned_to != request.user

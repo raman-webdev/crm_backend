@@ -143,6 +143,24 @@ class CustomerDetailView(APIView):
         )
 
         serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data.get["email"]
+
+        if email:
+            exists = Customer.objects.filter(
+                organization=organization,
+                email=email,
+                is_active=True,
+            ).exclude(pk=customer.pk).exists()
+
+            if exists:
+                return Response(
+                    {
+                        "detail": "Customer with this email already exists.",
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
         serializer.save()
 
         return Response(serializer.data)

@@ -167,9 +167,14 @@ REST_FRAMEWORK = {
 
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "CRM API",
-    "DESCRIPTION": "Multi Tenant CRM",
+
+    "TITLE": "Multi-Tenant CRM API",
+
+    "DESCRIPTION": "Backend Technical Assessment",
+
     "VERSION": "1.0.0",
+
+    "SERVE_INCLUDE_SCHEMA": False,
 }
 
 

@@ -15,6 +15,7 @@ from organizations.models import Membership
 from activity_logs.helpers import log_activity
 from activity_logs.models import ActivityLog
 from config.pagination import paginate_queryset
+from config.search import apply_search
 
 # Create your views here.
 
@@ -37,6 +38,18 @@ class CustomerListCreateView(APIView):
             organization=organization,
             is_active=True
         ).order_by("-created_at")
+
+        search = request.query_params.get("search")
+        customers = apply_search(
+            customers,
+            search,
+            [
+                "name",
+                "email",
+                "phone",
+                "company",
+            ],
+        )
 
         result = paginate_queryset(
             customers,

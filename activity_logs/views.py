@@ -8,6 +8,7 @@ from organizations.helpers import (
 )
 from organizations.models import Membership
 from config.pagination import paginate_queryset
+from config.search import apply_search
 
 from .models import ActivityLog
 from .serializers import ActivityLogSerializer
@@ -30,6 +31,17 @@ class ActivityLogListView(APIView):
             organization=organization,
         ).select_related(
             "user",
+        )
+
+        search = request.query_params.get("search")
+        logs = apply_search(
+            logs,
+            search,
+            [
+                "action",
+                "description",
+                "user__email",
+            ],
         )
 
         result = paginate_queryset(

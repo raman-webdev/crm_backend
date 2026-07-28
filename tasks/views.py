@@ -17,6 +17,7 @@ from accounts.models import User
 from activity_logs.models import ActivityLog
 from activity_logs.helpers import log_activity
 from config.pagination import paginate_queryset
+from config.search import apply_search
 
 from .models import Task
 from .serializers import TaskSerializer
@@ -47,6 +48,17 @@ class TaskListCreateView(APIView):
                 organization=organization,
                 is_active=True,
             ).order_by("-created_at")
+
+        search = request.query_params.get("search")
+        tasks = apply_search(
+            tasks,
+            search,
+            [
+                "title",
+                "description",
+                "customer__name",
+            ],
+        )
 
         result = paginate_queryset(
             tasks,

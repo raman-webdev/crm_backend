@@ -16,6 +16,8 @@ from activity_logs.helpers import log_activity
 from activity_logs.models import ActivityLog
 from config.pagination import paginate_queryset
 from config.search import apply_search
+from config.filters import apply_filters
+from config.ordering import apply_ordering
 
 # Create your views here.
 
@@ -50,6 +52,26 @@ class CustomerListCreateView(APIView):
                 "company",
             ],
         )
+
+        customers = apply_filters(
+    customers,
+    request,
+    [
+        "status",
+    ],
+)
+
+        customers = apply_ordering(
+    customers,
+    request,
+    allowed_fields=[
+        "name",
+        "email",
+        "company",
+        "status",
+        "created_at",
+    ],
+)
 
         result = paginate_queryset(
             customers,

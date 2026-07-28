@@ -18,6 +18,8 @@ from activity_logs.models import ActivityLog
 from activity_logs.helpers import log_activity
 from config.pagination import paginate_queryset
 from config.search import apply_search
+from config.filters import apply_filters
+from config.ordering import apply_ordering
 
 from .models import Task
 from .serializers import TaskSerializer
@@ -59,6 +61,29 @@ class TaskListCreateView(APIView):
                 "customer__name",
             ],
         )
+
+        tasks = apply_filters(
+    tasks,
+    request,
+    [
+        "status",
+        "priority",
+        "assigned_to",
+        "customer",
+    ],
+)
+
+        tasks = apply_ordering(
+    tasks,
+    request,
+    allowed_fields=[
+        "title",
+        "priority",
+        "status",
+        "due_date",
+        "created_at",
+    ],
+)
 
         result = paginate_queryset(
             tasks,

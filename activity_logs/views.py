@@ -7,6 +7,7 @@ from organizations.helpers import (
     require_roles,
 )
 from organizations.models import Membership
+from config.pagination import paginate_queryset
 
 from .models import ActivityLog
 from .serializers import ActivityLogSerializer
@@ -31,9 +32,24 @@ class ActivityLogListView(APIView):
             "user",
         )
 
-        serializer = ActivityLogSerializer(
+        result = paginate_queryset(
             logs,
+            request,
+        )
+
+        serializer = ActivityLogSerializer(
+            result["items"],
             many=True,
         )
 
-        return Response(serializer.data)
+        return Response(
+    {
+        "count": result["count"],
+        "page": result["page"],
+        "page_size": result["page_size"],
+        "total_pages": result["total_pages"],
+        "has_next": result["has_next"],
+        "has_previous": result["has_previous"],
+        "results": serializer.data,
+    }
+)

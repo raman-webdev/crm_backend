@@ -13,6 +13,8 @@ from .models import Organization, Membership, Invitation
 from .serializers import OrganizationSerializer, InviteMemberSerializer, InvitationDetailSerializer, MembershipSerializer
 from .helpers import get_current_organization, require_roles
 from accounts.models import User
+from activity_logs.models import ActivityLog
+from activity_logs.helpers import log_activity
 
 
 class OrganizationListCreateView(APIView):
@@ -180,6 +182,14 @@ class InvitationView(APIView):
             invited_by=request.user,
             expires_at=timezone.now()+timedelta(days=7)
         )
+
+        log_activity(
+    organization=organization,
+    user=request.user,
+    action=ActivityLog.MEMBER_INVITED,
+    obj=invitation,
+    description=f"Invited '{invitation.email}' as {invitation.role}.",
+)
 
         return Response(
             {

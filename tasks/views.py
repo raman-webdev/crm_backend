@@ -14,6 +14,9 @@ from organizations.models import Membership
 
 from customers.models import Customer
 from accounts.models import User
+from activity_logs.models import ActivityLog
+from activity_logs.helpers import log_activity
+from config.pagination import paginate_queryset
 
 from .models import Task
 from .serializers import TaskSerializer
@@ -45,12 +48,27 @@ class TaskListCreateView(APIView):
                 is_active=True,
             ).order_by("-created_at")
 
-        serializer = TaskSerializer(
+        result = paginate_queryset(
             tasks,
+            request,
+        )
+
+        serializer = TaskSerializer(
+            result["items"],
             many=True,
         )
 
-        return Response(serializer.data)
+        return Response(
+    {
+        "count": result["count"],
+        "page": result["page"],
+        "page_size": result["page_size"],
+        "total_pages": result["total_pages"],
+        "has_next": result["has_next"],
+        "has_previous": result["has_previous"],
+        "results": serializer.data,
+    }
+)
 
     @transaction.atomic
     def post(self, request):
@@ -204,6 +222,14 @@ class TaskDetailView(APIView):
         
 
         serializer.save()
+
+        log_activity(
+    organization=organization,
+    user=request.user,
+    action=ActivityLog.TASK_UPDATED,
+    obj=task,
+    description=f"Updated task '{task.title}'.",
+)
 
         return Response(serializer.data)
 

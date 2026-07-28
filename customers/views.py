@@ -12,6 +12,9 @@ from .serializers import CustomerSerializer
 
 from organizations.helpers import get_current_organization, require_roles
 from organizations.models import Membership
+from activity_logs.helpers import log_activity
+from activity_logs.models import ActivityLog
+from config.pagination import paginate_queryset
 
 # Create your views here.
 
@@ -35,12 +38,27 @@ class CustomerListCreateView(APIView):
             is_active=True
         ).order_by("-created_at")
 
-        serializer = CustomerSerializer(
+        result = paginate_queryset(
             customers,
+            request,
+        )
+
+        serializer = CustomerSerializer(
+            result["items"],
             many=True,
         )
 
-        return Response(serializer.data)
+        return Response(
+    {
+        "count": result["count"],
+        "page": result["page"],
+        "page_size": result["page_size"],
+        "total_pages": result["total_pages"],
+        "has_next": result["has_next"],
+        "has_previous": result["has_previous"],
+        "results": serializer.data,
+    }
+)
 
     @transaction.atomic
     def post(self, request):
@@ -77,6 +95,14 @@ class CustomerListCreateView(APIView):
             organization=organization,
             created_by=request.user,
         )
+
+        log_activity(
+    organization=organization,
+    user=request.user,
+    action=ActivityLog.CUSTOMER_CREATED,
+    obj=customer,
+    description=f"Created customer '{customer.name}'.",
+)
 
         return Response(
             {
